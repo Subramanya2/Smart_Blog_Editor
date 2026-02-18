@@ -53,3 +53,34 @@ We use Zustand for its simplicity and performance.
   requirements.txt
   .env           # Config
 ```
+
+## System Diagram
+```mermaid
+graph TD
+    User((User))
+    
+    subgraph Client [Frontend (Vercel)]
+        UI[React UI]
+        Store[Zustand Store]
+        Hooks[Custom Hooks]
+    end
+    
+    subgraph Server [Backend (Render)]
+        API[FastAPI]
+        Auth[Auth Module]
+        DB[(SQLite DB)]
+    end
+    
+    subgraph External [External Services]
+        Gemini[Google Gemini API]
+    end
+    
+    User -->|Interacts| UI
+    UI -->|State Updates| Store
+    UI -->|API Calls (Axios)| Hooks
+    Hooks -->|HTTP Request| API
+    
+    API -->|Validate User| Auth
+    API -->|Read/Write| DB
+    API -->|Generate Content| Gemini
+```
