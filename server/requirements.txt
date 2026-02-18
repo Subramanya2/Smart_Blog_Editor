@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+pyjwt
+passlib
+requests
+python-dotenv
+python-dotenv
