@@ -3,7 +3,7 @@
 A Notion-style block editor built with **React (Vite)**, **FastAPI**, and **Lexical**, featuring AI-powered writing assistance and robust state management.
 
 ## 🌐 Live Demo
-- **Frontend (Vercel)**: [Click Here](https://smart-blog-editor-subramanya2s-projects.vercel.app)
+- **Frontend (Vercel)**: [Click Here](https://smart-blog-editor-omega.vercel.app/)
 - **Backend API (Render)**: [Click Here](https://smart-blog-editor-girl.onrender.com)
 
 ## 🚀 Setup Instructions
