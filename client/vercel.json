@@ -1,4 +1,7 @@
 {
+    "framework": "vite",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "rewrites": [
         {
             "source": "/(.*)",
