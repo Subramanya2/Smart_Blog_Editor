@@ -132,10 +132,10 @@ async def login(user: UserLogin):
 
 @app.post("/api/ai/generate")
 async def generate_ai(request: AIRequest):
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GENAI_API_KEY")
     
     if not api_key:
-        return {"generated_text": "[MOCK AI - No Key] Please add GEMINI_API_KEY to .env"}
+        return {"generated_text": "[MOCK AI - No Key] Please add GENAI_API_KEY to .env"}
 
     # Prompt construction
     prompt_text = ""

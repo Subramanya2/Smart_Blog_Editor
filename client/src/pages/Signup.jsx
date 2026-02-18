@@ -11,7 +11,7 @@ export default function Signup() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://127.0.0.1:8000/register', { username, password });
+            await axios.post('https://smart-blog-editor-girl.onrender.com/register', { username, password });
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.detail || 'Signup failed');

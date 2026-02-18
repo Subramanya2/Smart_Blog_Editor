@@ -14,7 +14,7 @@ export default function AIModal({ isOpen, onClose, onInsert }) {
         setLoading(true);
         setResult('');
         try {
-            const res = await axios.post('http://127.0.0.1:8000/api/ai/generate', {
+            const res = await axios.post('https://smart-blog-editor-girl.onrender.com/api/ai/generate', {
                 text,
                 prompt_type: type
             });

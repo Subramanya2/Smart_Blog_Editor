@@ -18,7 +18,7 @@ export default function Login() {
             // but my backend endpoint expects JSON body (UserLogin model).
             // Let's check main.py... ah, `login(user: UserLogin)`. So JSON is correct.
 
-            const res = await axios.post('http://127.0.0.1:8000/login', { username, password });
+            const res = await axios.post('https://smart-blog-editor-girl.onrender.com/login', { username, password });
             login(username, res.data.access_token);
             navigate('/');
         } catch (err) {

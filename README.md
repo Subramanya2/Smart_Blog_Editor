@@ -21,9 +21,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Create a `.env` file in the `server/` directory:
+4. Create a `.env` file and add your Google Gemini API Key:
 ```env
-GEMINI_API_KEY=your_actual_api_key_here
+GENAI_API_KEY=your_key_here
 ```
 
 Run the server:

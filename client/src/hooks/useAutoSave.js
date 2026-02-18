@@ -23,7 +23,7 @@ export default function useAutoSave(postId) {
                 const jsonState = editorState.toJSON();
                 try {
                     await axios.patch(
-                        `http://127.0.0.1:8000/api/posts/${postId}`,
+                        `https://smart-blog-editor-girl.onrender.com/api/posts/${postId}`,
                         { content: jsonState },
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
