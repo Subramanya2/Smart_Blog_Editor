@@ -2,6 +2,10 @@
 
 A Notion-style block editor built with **React (Vite)**, **FastAPI**, and **Lexical**, featuring AI-powered writing assistance and robust state management.
 
+## 🌐 Live Demo
+- **Frontend (Vercel)**: [Click Here](https://smart-blog-editor-pcofm0m4y-subramanya2s-projects.vercel.app/)
+- **Backend API (Render)**: [Click Here](https://smart-blog-editor-girl.onrender.com)
+
 ## 🚀 Setup Instructions
 
 ### Prerequisites
@@ -23,7 +27,7 @@ pip install -r requirements.txt
 
 4. Create a `.env` file and add your Google Gemini API Key:
 ```env
-GENAI_API_KEY=your_key_here
+GEMINI_API_KEY=your_actual_api_key_here
 ```
 
 Run the server:
