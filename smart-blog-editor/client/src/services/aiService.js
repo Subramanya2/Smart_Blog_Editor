@@ -1,54 +1,96 @@
+import { API_BASE_URL } from './api';
+import useStore from '../store';
+
 /**
  * Streams autocomplete completions from the backend SSE endpoint.
  *
- * @param {string} text Input context text
+ * @param {string} text        Input context text
  * @param {AbortSignal} signal AbortController signal
- * @param {function(string): void} onChunk Callback fired when a new text chunk arrives
+ * @param {function(string): void} onChunk Callback fired with the accumulated ghost text on each chunk
  */
 export async function streamAutocomplete(text, signal, onChunk) {
   if (!text || !text.trim()) return;
 
-  const host = window.location.hostname || 'localhost';
-  const protocol = window.location.protocol;
-  const apiUrl = `${protocol}//${host}:8000/api/autocomplete`;
+  const apiUrl = `${API_BASE_URL}/api/autocomplete`;
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-    signal,
-  });
+  // Attach auth token if available
+  const token = useStore.getState().token;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
-  if (!response.ok || !response.body) return;
+  let response;
+  try {
+    response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ text }),
+      signal,
+    });
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('[Ghost Text] Fetch error:', err);
+    }
+    return;
+  }
+
+  if (!response.ok) {
+    console.error('[Ghost Text] Backend returned', response.status);
+    return;
+  }
+
+  if (!response.body) {
+    console.warn('[Ghost Text] No response body (SSE not supported?)');
+    return;
+  }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let accumulatedGhostText = '';
+  let buffer = '';
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    if (signal.aborted) break;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (signal.aborted) break;
 
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
+      buffer += decoder.decode(value, { stream: true });
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const rawJson = line.slice(6).trim();
-          if (rawJson) {
-            const textChunk = JSON.parse(rawJson);
-            accumulatedGhostText += textChunk;
+      // SSE lines are separated by '\n\n' 
+      const parts = buffer.split('\n\n');
+      // Keep the incomplete trailing part in buffer
+      buffer = parts.pop();
+
+      for (const part of parts) {
+        const lines = part.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const rawJson = line.slice(6).trim();
+            if (rawJson) {
+              try {
+                const textChunk = JSON.parse(rawJson);
+                if (typeof textChunk === 'string') {
+                  accumulatedGhostText += textChunk;
+                }
+              } catch {
+                // Ignore malformed JSON
+              }
+            }
           }
-        } catch (e) {
-          // Ignore incomplete JSON chunks
         }
       }
-    }
 
-    if (accumulatedGhostText && !signal.aborted) {
-      onChunk(accumulatedGhostText);
+      if (accumulatedGhostText && !signal.aborted) {
+        onChunk(accumulatedGhostText);
+      }
     }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('[Ghost Text] Stream read error:', err);
+    }
+  } finally {
+    reader.cancel().catch(() => {});
   }
 }

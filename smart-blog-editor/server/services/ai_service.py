@@ -8,6 +8,10 @@ try:
 except ImportError:
     HAS_GENAI = False
 
+# ---------------------------------------------------------------------------
+# Non-streaming AI text generation
+# ---------------------------------------------------------------------------
+
 async def generate_ai_text(text: str, prompt_type: str) -> str:
     if not GEMINI_API_KEY:
         return "[MOCK AI - No Key] Please add GEMINI_API_KEY to .env"
@@ -21,87 +25,87 @@ async def generate_ai_text(text: str, prompt_type: str) -> str:
 
     if HAS_GENAI:
         try:
-            client = genai.Client(api_key=GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt_text
-            )
-            if response.text:
-                return response.text
-        except Exception as e:
-            print(f"SDK Error: {e}, falling back to REST API")
+            def _sync_generate():
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt_text
+                )
+                return response.text or ""
 
-    try:
-        import requests
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-        headers = {"Content-Type": "application/json"}
-        payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
-        response = requests.post(url, headers=headers, json=payload)
-        
-        if response.status_code == 200:
-            result = response.json()
-            generated_content = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
-            if generated_content:
-                return generated_content
-    except Exception as e:
-        print(f"REST Error: {e}")
+            result = await asyncio.to_thread(_sync_generate)
+            if result:
+                return result
+        except Exception as e:
+            print(f"SDK Error: {e}")
 
     return "[AI Copilot] Here is an AI-generated suggestion based on your text context."
 
+
+# ---------------------------------------------------------------------------
+# Streaming autocomplete  –  FIXED: sync SDK wrapped in asyncio.to_thread
+# ---------------------------------------------------------------------------
+
+def _collect_stream_chunks_sync(prompt: str) -> list[str]:
+    """
+    Run the blocking Gemini streaming SDK call synchronously and collect all
+    text chunks into a list.  This function is meant to be called via
+    asyncio.to_thread() so it never blocks the event loop.
+    """
+    if not HAS_GENAI:
+        return []
+
+    chunks: list[str] = []
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content_stream(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        for chunk in response:
+            if chunk.text:
+                chunks.append(chunk.text)
+    except Exception as e:
+        print(f"SDK Stream Error: {e}")
+
+    return chunks
+
+
 async def generate_autocomplete_stream(text: str):
+    """
+    Async generator that yields SSE-formatted `data:` lines.
+
+    Strategy:
+      1. Run the blocking Gemini SDK call in a thread pool via asyncio.to_thread.
+      2. Once chunks are collected, yield them one-by-one with a tiny delay so
+         the browser sees incremental SSE events (streaming feel).
+      3. If no API key or SDK returns nothing, fall back to a mock stream.
+    """
     if not GEMINI_API_KEY:
-        mock_words = [" is", " an", " AI", " copilot", " suggestion."]
-        for word in mock_words:
+        # No key at all – send a mock stream immediately
+        mock = [" is", " an", " AI", " copilot", " suggestion."]
+        for word in mock:
             yield f"data: {json.dumps(word)}\n\n"
             await asyncio.sleep(0.08)
         return
 
-    prompt = f"Complete the following text naturally starting from the exact end. Provide ONLY the next completing phrase or sentence (12 words max). Do NOT repeat the input text:\n{text}"
+    prompt = (
+        "Complete the following text naturally starting from the exact end. "
+        "Provide ONLY the next completing phrase or sentence (12 words max). "
+        "Do NOT repeat the input text:\n" + text
+    )
 
-    if HAS_GENAI:
-        try:
-            client = genai.Client(api_key=GEMINI_API_KEY)
-            response = client.models.generate_content_stream(
-                model='gemini-1.5-flash',
-                contents=prompt
-            )
-            yielded_any = False
-            for chunk in response:
-                if chunk.text:
-                    yielded_any = True
-                    yield f"data: {json.dumps(chunk.text)}\n\n"
-                    await asyncio.sleep(0.01)
-            if yielded_any:
-                return
-        except Exception as e:
-            print(f"SDK Stream Error: {e}, falling back to REST stream / mock fallback")
+    # Run the blocking SDK stream in a background thread
+    chunks: list[str] = await asyncio.to_thread(_collect_stream_chunks_sync, prompt)
 
-    try:
-        import requests
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key={GEMINI_API_KEY}&alt=sse"
-        headers = {"Content-Type": "application/json"}
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        yielded_any = False
-        with requests.post(url, headers=headers, json=payload, stream=True) as resp:
-            for line in resp.iter_lines():
-                if line:
-                    line_str = line.decode("utf-8")
-                    if line_str.startswith("data: "):
-                        try:
-                            json_data = json.loads(line_str[6:])
-                            text_chunk = json_data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
-                            if text_chunk:
-                                yielded_any = True
-                                yield f"data: {json.dumps(text_chunk)}\n\n"
-                        except Exception:
-                            pass
-        if yielded_any:
-            return
-    except Exception as e:
-        print(f"REST Stream error: {e}")
+    if chunks:
+        for chunk in chunks:
+            yield f"data: {json.dumps(chunk)}\n\n"
+            await asyncio.sleep(0.04)   # small delay gives a streaming feel
+        return
 
-    # Fallback stream if API rate limit (429) or error occurs
-    mock_words = [" is", " evolving", " rapidly", " with", " modern", " AI", " tools."]
-    for word in mock_words:
+    # Fallback mock stream (e.g. 429 quota, network error, no SDK)
+    mock = [" is", " evolving", " rapidly", " with", " modern", " AI", " tools."]
+    for word in mock:
         yield f"data: {json.dumps(word)}\n\n"
         await asyncio.sleep(0.08)
