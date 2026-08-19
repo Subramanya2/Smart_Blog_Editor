@@ -1,6 +1,6 @@
 # Smart Blog Editor Backend Server
 
-FastAPI backend application powering **Smart Blog Editor**, supporting JWT authentication, SQLite persistence, real-time Yjs CRDT WebSocket broadcasting, and streaming Google Gemini AI copilot completions over Server-Sent Events (SSE).
+FastAPI backend application powering **Smart Blog Editor**, supporting JWT authentication, SQLite persistence, real-time Yjs CRDT WebSocket broadcasting, and streaming AI copilot completions over Server-Sent Events (SSE) using **Groq** and **Google Gemini**.
 
 ---
 
@@ -8,7 +8,7 @@ FastAPI backend application powering **Smart Blog Editor**, supporting JWT authe
 
 - **FastAPI & Uvicorn**: High-performance asynchronous Web framework & ASGI server.
 - **Yjs WebSocket Relay**: Binary WebSocket stream broadcasting for real-time CRDT document synchronization.
-- **Google Gemini API (`google-generativeai`)**: Streaming AI copilot completion (`alt=sse`).
+- **Groq & Google Gemini APIs**: Multi-provider streaming AI copilot completion (`text/event-stream`).
 - **Passlib & PyJWT**: PBKDF2 password hashing & token authentication.
 - **SQLite3**: Normalized relational database storage.
 
@@ -32,7 +32,7 @@ server/
 │   ├── posts.py              # APIRouter for /api/posts/ CRUD
 │   └── websocket.py          # APIRouter for /ws/{document_id} CRDT relay
 ├── services/
-│   ├── ai_service.py         # Gemini API SDK & SSE streaming generators
+│   ├── ai_service.py         # Multi-provider Groq & Gemini streaming generators
 │   ├── post_service.py       # Isolated database queries for post CRUD
 │   └── websocket_manager.py  # ConnectionManager class for WebSocket room broadcasting
 ├── blog.db                   # SQLite database file
@@ -50,7 +50,7 @@ server/
 py -m venv venv
 .\venv\Scripts\activate
 
-# Mac/Linux
+# macOS / Linux
 python3 -m venv venv
 source venv/bin/activate
 ```
@@ -63,8 +63,10 @@ pip install -r requirements.txt
 ### 3. Environment Variables
 Create a `.env` file inside `server/.env`:
 ```env
-GEMINI_API_KEY=your_actual_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 SECRET_KEY=supersecretkey
+DB_FILE=blog.db
 ```
 
 ### 4. Run the Development Server
