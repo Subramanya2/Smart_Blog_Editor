@@ -1,16 +1,18 @@
-import { Sparkles, FileText, Clock } from 'lucide-react';
+import { Sparkles, FileText, Clock, Wifi, Zap } from 'lucide-react';
 import Editor from './Editor';
 import EditorErrorBoundary from './EditorErrorBoundary';
 
 export default function EditorArea({ activePost, onUpdateTitle, onUpdateContent, onOpenAI }) {
     if (!activePost) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                <div className="w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-center mb-5">
-                    <FileText className="w-9 h-9 text-gray-300" />
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 select-none">
+                <div className="w-20 h-20 bg-white rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-center mb-5 text-purple-600 shadow-purple-500/5">
+                    <FileText className="w-9 h-9 text-slate-300" />
                 </div>
-                <p className="text-lg font-medium text-gray-500">No draft selected</p>
-                <p className="text-sm text-gray-400 mt-1">Pick one from the sidebar or create a new draft</p>
+                <h2 className="text-lg font-semibold text-slate-700">No Document Selected</h2>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm text-center">
+                    Select an existing draft from the sidebar or click <span className="font-medium text-purple-600">New Draft</span> to start writing.
+                </p>
             </div>
         );
     }
@@ -19,39 +21,52 @@ export default function EditorArea({ activePost, onUpdateTitle, onUpdateContent,
     const timeAgo = formatTimeAgo(updatedAt);
 
     return (
-        <div className="flex-1 flex flex-col min-w-0 bg-gray-50">
-            {/* ── Top bar: title + actions ── */}
-            <div className="h-16 border-b border-gray-200 bg-white px-8 flex items-center gap-4 flex-shrink-0">
-                <input
-                    key={activePost._id}
-                    type="text"
-                    className="text-xl font-bold outline-none placeholder-gray-300 bg-transparent flex-1 min-w-0 text-gray-900"
-                    placeholder="Untitled Draft"
-                    defaultValue={activePost.title}
-                    onBlur={(e) => {
-                        if (e.target.value !== activePost.title) {
-                            onUpdateTitle(activePost._id, e.target.value);
-                        }
-                    }}
-                />
-
-                <div className="flex items-center gap-1 text-xs text-gray-400 whitespace-nowrap">
-                    <Clock className="w-3 h-3" />
-                    {timeAgo}
+        <main className="flex-1 flex flex-col min-w-0 bg-slate-50/60 overflow-hidden">
+            {/* ── Top bar: Title + Status + AI Trigger ── */}
+            <header className="h-16 border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-8 flex items-center gap-4 flex-shrink-0 z-10">
+                <div className="flex-1 min-w-0 flex items-center gap-3">
+                    <input
+                        key={activePost._id}
+                        type="text"
+                        className="text-lg font-bold outline-none placeholder-slate-300 bg-transparent flex-1 min-w-0 text-slate-800 tracking-tight"
+                        placeholder="Untitled Document"
+                        defaultValue={activePost.title}
+                        onBlur={(e) => {
+                            if (e.target.value !== activePost.title) {
+                                onUpdateTitle(activePost._id, e.target.value);
+                            }
+                        }}
+                    />
                 </div>
 
-                <button
-                    onClick={onOpenAI}
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition font-medium text-sm shadow-sm"
-                >
-                    <Sparkles className="w-4 h-4" />
-                    AI Assistant
-                </button>
-            </div>
+                <div className="flex items-center gap-3">
+                    {/* CRDT & Time info */}
+                    <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-slate-100/70 border border-slate-200/60 px-2.5 py-1 rounded-lg select-none">
+                        <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[11px] font-mono">CRDT Sync</span>
+                        </div>
+                        <span className="text-slate-300">|</span>
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                            <Clock className="w-3 h-3" />
+                            <span>{timeAgo}</span>
+                        </div>
+                    </div>
+
+                    {/* AI Assistant Modal Button */}
+                    <button
+                        onClick={onOpenAI}
+                        className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3.5 py-1.5 rounded-xl transition-all font-medium text-xs shadow-md shadow-purple-600/20 active:scale-[0.98]"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Assistant</span>
+                    </button>
+                </div>
+            </header>
 
             {/* ── Editor scroll area ── */}
-            <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-3xl mx-auto">
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+                <div className="max-w-3xl mx-auto space-y-3">
                     <EditorErrorBoundary>
                         <Editor
                             key={activePost._id}
@@ -61,13 +76,21 @@ export default function EditorArea({ activePost, onUpdateTitle, onUpdateContent,
                         />
                     </EditorErrorBoundary>
 
-                    {/* Ghost text hint */}
-                    <p className="text-xs text-gray-400 mt-3 text-center select-none">
-                        ✦ Stop typing for 1.2s to see AI suggestions · Press <kbd className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-500">Tab</kbd> to accept
-                    </p>
+                    {/* Keyboard Shortcut Hint Footer */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-white/60 border border-slate-200/60 rounded-xl text-[11px] text-slate-400 select-none">
+                        <div className="flex items-center gap-1.5">
+                            <Zap className="w-3.5 h-3.5 text-amber-500" />
+                            <span>AI Ghost Text: Pause for 1.2s</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span>Press</span>
+                            <kbd className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] text-slate-600 font-semibold shadow-2xs">Tab</kbd>
+                            <span>to accept completion</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }
 
@@ -76,5 +99,5 @@ function formatTimeAgo(date) {
     if (seconds < 60) return 'just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
