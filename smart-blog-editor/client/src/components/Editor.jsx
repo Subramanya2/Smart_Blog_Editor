@@ -1,9 +1,13 @@
+import { useCallback } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { CollaborationPlugin } from '@lexical/react/LexicalCollaborationPlugin';
+import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import useAutoSave from '../hooks/useAutoSave';
+import { GhostTextNode } from '../nodes/GhostTextNode';
+import GhostTextPlugin from './GhostTextPlugin';
+import { createYjsProvider } from '../services/websocketService';
 
 // Theme configuration
 const theme = {
@@ -20,6 +24,7 @@ function AutoSaveWrapper({ postId }) {
 export default function Editor({ postId, initialContent }) {
   const initialConfig = {
     namespace: 'MyEditor',
+    nodes: [GhostTextNode],
     theme,
     onError: (e) => console.error(e),
     editorState: (initialContent && Object.keys(initialContent).length > 0)
@@ -27,15 +32,27 @@ export default function Editor({ postId, initialContent }) {
       : null
   };
 
+  const providerFactory = useCallback(
+    (id, yjsDocMap) => createYjsProvider(id, yjsDocMap),
+    []
+  );
+
   return (
     <div className="relative border rounded-lg p-4 shadow-sm bg-white min-h-[300px]">
       <LexicalComposer initialConfig={initialConfig}>
         <RichTextPlugin
           contentEditable={<ContentEditable className="outline-none min-h-[200px]" />}
           placeholder={<div className="absolute top-4 text-gray-400">Start writing...</div>}
-          ErrorBoundary={(e) => <div>Error</div>}
+          ErrorBoundary={LexicalErrorBoundary}
         />
-        <HistoryPlugin />
+        {postId && (
+          <CollaborationPlugin
+            id={postId}
+            providerFactory={providerFactory}
+            shouldBootstrap={true}
+          />
+        )}
+        <GhostTextPlugin />
         {postId && <AutoSaveWrapper postId={postId} />}
       </LexicalComposer>
     </div>
