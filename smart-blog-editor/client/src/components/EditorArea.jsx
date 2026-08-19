@@ -1,7 +1,7 @@
 import { Sparkles, FileText } from 'lucide-react';
 import Editor from './Editor';
 
-export default function EditorArea({ activePost, onUpdateTitle, onOpenAI }) {
+export default function EditorArea({ activePost, onUpdateTitle, onUpdateContent, onOpenAI }) {
     if (!activePost) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
@@ -45,6 +45,7 @@ export default function EditorArea({ activePost, onUpdateTitle, onOpenAI }) {
                         key={activePost._id}
                         postId={activePost._id}
                         initialContent={activePost.content}
+                        onUpdateContent={onUpdateContent}
                     />
                 </div>
             </div>

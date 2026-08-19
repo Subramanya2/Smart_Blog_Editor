@@ -60,6 +60,10 @@ export default function usePosts() {
         }
     };
 
+    const updatePostContent = (id, content) => {
+        setPosts(prevPosts => prevPosts.map(p => p._id === id ? { ...p, content } : p));
+    };
+
     return {
         posts,
         loading,
@@ -67,6 +71,7 @@ export default function usePosts() {
         fetchPosts,
         createPost,
         updatePostTitle,
+        updatePostContent,
         deletePost
     };
 }

@@ -19,7 +19,8 @@ export default function Home() {
         fetchPosts,
         createPost,
         deletePost,
-        updatePostTitle
+        updatePostTitle,
+        updatePostContent
     } = usePosts();
 
     useEffect(() => {
@@ -69,6 +70,7 @@ export default function Home() {
                 <EditorArea
                     activePost={activePost}
                     onUpdateTitle={updatePostTitle}
+                    onUpdateContent={updatePostContent}
                     onOpenAI={() => setIsAIModalOpen(true)}
                 />
             </div>

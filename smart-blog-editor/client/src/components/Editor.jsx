@@ -17,18 +17,29 @@ const theme = {
 };
 
 // Wrapper for hook usage inside Context
-function AutoSaveWrapper({ postId }) {
-  const isSaving = useAutoSave(postId);
+function AutoSaveWrapper({ postId, onUpdateContent }) {
+  const isSaving = useAutoSave(postId, (content) => {
+    if (onUpdateContent) onUpdateContent(postId, content);
+  });
   return <div className="text-xs text-gray-500 absolute top-2 right-2">{isSaving ? 'Saving...' : 'Saved'}</div>;
 }
 
-export default function Editor({ postId, initialContent }) {
+export default function Editor({ postId, initialContent, onUpdateContent }) {
+  const hasContent = initialContent && (
+    (typeof initialContent === 'object' && Object.keys(initialContent).length > 0) ||
+    (typeof initialContent === 'string' && initialContent.trim().length > 0)
+  );
+
+  const initialEditorState = hasContent
+    ? (typeof initialContent === 'string' ? initialContent : JSON.stringify(initialContent))
+    : null;
+
   const initialConfig = {
     namespace: 'MyEditor',
     nodes: [GhostTextNode],
     theme,
     onError: (e) => console.error(e),
-    editorState: null
+    editorState: initialEditorState
   };
 
   const providerFactory = useCallback(
@@ -50,10 +61,11 @@ export default function Editor({ postId, initialContent }) {
               id={postId}
               providerFactory={providerFactory}
               shouldBootstrap={true}
+              initialEditorState={initialEditorState}
             />
           )}
           <GhostTextPlugin />
-          {postId && <AutoSaveWrapper postId={postId} />}
+          {postId && <AutoSaveWrapper postId={postId} onUpdateContent={onUpdateContent} />}
         </LexicalComposer>
       </LexicalCollaboration>
     </div>
