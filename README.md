@@ -26,16 +26,6 @@ A modern Notion-style collaborative rich-text editor built with **React 19**, **
 
 ---
 
-## 📄 CV / Resume Highlights (Ready to Copy)
-
-> **Smart Blog Editor — Real-Time Collaborative AI Rich-Text Editor** | *React 19, FastAPI, Lexical, Yjs, WebSockets, Groq API, SQLite*
-> - Engineered a collaborative rich-text editor using Meta’s **Lexical** framework and **Yjs CRDTs** over WebSockets, enabling real-time simultaneous multi-user editing with zero merge conflicts.
-> - Implemented an inline **Streaming AI Copilot (Ghost Text)** using Server-Sent Events (SSE) and Groq LLaMA / Gemini models, featuring sub-100ms response streaming and `Tab` acceptance.
-> - Designed a custom Lexical AST node (`GhostTextNode`) and plugin architecture isolated from collaborative synchronization (`skip-collab` tags) to prevent CRDT state pollution.
-> - Built a dual-path auto-save engine in React and FastAPI with immediate commit on AI acceptance and 2-second debouncing on active typing.
-
----
-
 ## 🚀 Setup Instructions
 
 ### Prerequisites
