@@ -20,6 +20,7 @@ import {
   ListNode,
 } from '@lexical/list';
 import { $getNearestNodeOfType } from '@lexical/utils';
+import { $isGhostTextNode } from '../nodes/GhostTextNode';
 import { $setBlocksType } from '@lexical/selection';
 
 function ToolbarButton({ onClick, active, title, children, disabled }) {
@@ -89,10 +90,19 @@ export default function ToolbarPlugin() {
         }
       }
 
-      // Safe Word count using standard Lexical $getRoot().getTextContent()
+      // Word count excluding active unaccepted GhostTextNode suggestions
       const root = $getRoot();
       if (root) {
-        const text = root.getTextContent() || '';
+        let text = '';
+        const collectText = (node) => {
+          if ($isGhostTextNode(node)) return;
+          if (node.getChildren) {
+            node.getChildren().forEach(collectText);
+          } else if (typeof node.getTextContent === 'function') {
+            text += ' ' + node.getTextContent();
+          }
+        };
+        root.getChildren().forEach(collectText);
         const words = text.trim().split(/\s+/).filter(Boolean);
         setWordCount(words.length);
       }
