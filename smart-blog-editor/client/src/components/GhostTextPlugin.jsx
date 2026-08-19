@@ -16,6 +16,8 @@ export default function GhostTextPlugin() {
   const [editor] = useLexicalComposerContext();
   const debounceTimerRef = useRef(null);
   const abortControllerRef = useRef(null);
+  // Set to true after Tab acceptance so the replacement update doesn't re-trigger autocomplete
+  const justAcceptedRef = useRef(false);
 
   // Helper to clear existing ghost node from editor
   const clearGhostNode = () => {
@@ -70,6 +72,13 @@ export default function GhostTextPlugin() {
         if (accepted) {
           event.preventDefault();
           abortStream();
+          // Clear any pending debounce from before acceptance
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+          }
+          // Flag so the dirty-leaves update from the replacement is skipped
+          justAcceptedRef.current = true;
           return true;
         }
         return false;
@@ -102,7 +111,14 @@ export default function GhostTextPlugin() {
         return;
       }
 
-      // User typed something — abort any running stream and clear stale ghost text
+      // Skip the dirty-leaves update caused by Tab acceptance (ghost→regular node replacement)
+      // Reset the flag so the NEXT real keystroke works normally
+      if (justAcceptedRef.current) {
+        justAcceptedRef.current = false;
+        return;
+      }
+
+      // User typed something new — abort any running stream and clear stale ghost text
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
