@@ -16,10 +16,13 @@ A Notion-style block editor built with **React (Vite)**, **FastAPI**, and **Lexi
 ### 1. Backend Setup (FastAPI)
 ```bash
 cd server
-python -m venv venv
+
 # Windows
+py -m venv venv
 venv\Scripts\activate
+
 # Mac/Linux
+python3 -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
