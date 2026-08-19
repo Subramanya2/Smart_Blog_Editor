@@ -9,3 +9,4 @@ dist/
 blog.db
 .agent/
 .gemini/
+self.md
