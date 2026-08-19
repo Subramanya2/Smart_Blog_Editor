@@ -81,7 +81,7 @@ export default function Editor({ postId, initialContent, onUpdateContent }) {
     ],
     theme,
     onError: (e) => console.error(e),
-    editorState: null,
+    editorState: initialEditorState,
   };
 
   const providerFactory = useCallback(

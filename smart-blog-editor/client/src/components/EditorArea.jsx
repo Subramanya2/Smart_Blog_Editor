@@ -1,5 +1,6 @@
 import { Sparkles, FileText, Clock } from 'lucide-react';
 import Editor from './Editor';
+import EditorErrorBoundary from './EditorErrorBoundary';
 
 export default function EditorArea({ activePost, onUpdateTitle, onUpdateContent, onOpenAI }) {
     if (!activePost) {
@@ -51,12 +52,14 @@ export default function EditorArea({ activePost, onUpdateTitle, onUpdateContent,
             {/* ── Editor scroll area ── */}
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-3xl mx-auto">
-                    <Editor
-                        key={activePost._id}
-                        postId={activePost._id}
-                        initialContent={activePost.content}
-                        onUpdateContent={onUpdateContent}
-                    />
+                    <EditorErrorBoundary>
+                        <Editor
+                            key={activePost._id}
+                            postId={activePost._id}
+                            initialContent={activePost.content}
+                            onUpdateContent={onUpdateContent}
+                        />
+                    </EditorErrorBoundary>
 
                     {/* Ghost text hint */}
                     <p className="text-xs text-gray-400 mt-3 text-center select-none">
