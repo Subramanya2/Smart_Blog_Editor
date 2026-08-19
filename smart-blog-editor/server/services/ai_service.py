@@ -3,7 +3,7 @@ import asyncio
 from core.config import GEMINI_API_KEY
 
 try:
-    import google.generativeai as genai
+    from google import genai
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
@@ -21,9 +21,11 @@ async def generate_ai_text(text: str, prompt_type: str) -> str:
 
     if HAS_GENAI:
         try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(prompt_text)
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt_text
+            )
             return response.text
         except Exception as e:
             print(f"SDK Error: {e}, falling back to REST API")
@@ -53,9 +55,11 @@ async def generate_autocomplete_stream(text: str):
 
     if HAS_GENAI:
         try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(prompt, stream=True)
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content_stream(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
             for chunk in response:
                 if chunk.text:
                     yield f"data: {json.dumps(chunk.text)}\n\n"
