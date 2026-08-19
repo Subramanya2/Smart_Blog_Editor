@@ -3,10 +3,9 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import {
   $getSelection,
   $isRangeSelection,
+  $getRoot,
   FORMAT_TEXT_COMMAND,
-  COMMAND_PRIORITY_CRITICAL,
   $createParagraphNode,
-  $isRootOrShadowRoot,
 } from 'lexical';
 import {
   $createHeadingNode,
@@ -20,30 +19,24 @@ import {
   $isListNode,
   ListNode,
 } from '@lexical/list';
-import { $getNearestNodeOfType, $findMatchingParent } from '@lexical/utils';
+import { $getNearestNodeOfType } from '@lexical/utils';
 import { $setBlocksType } from '@lexical/selection';
-
-const BLOCK_TYPES = {
-  paragraph: 'Normal',
-  h1: 'Heading 1',
-  h2: 'Heading 2',
-  h3: 'Heading 3',
-  bullet: 'Bullet List',
-  number: 'Numbered List',
-  quote: 'Quote',
-};
 
 function ToolbarButton({ onClick, active, title, children, disabled }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onMouseDown={(e) => {
+        // Prevent button click from stealing focus from Lexical editor
+        e.preventDefault();
+        onClick();
+      }}
       disabled={disabled}
       title={title}
       className={`
         p-1.5 rounded text-sm font-medium transition-all
         ${active
-          ? 'bg-purple-100 text-purple-700'
+          ? 'bg-purple-100 text-purple-700 font-bold'
           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
         }
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
@@ -55,7 +48,7 @@ function ToolbarButton({ onClick, active, title, children, disabled }) {
 }
 
 function Divider() {
-  return <div className="w-px h-5 bg-gray-200 mx-1" />;
+  return <div className="w-px h-5 bg-gray-200 mx-1 self-center" />;
 }
 
 export default function ToolbarPlugin() {
@@ -68,51 +61,45 @@ export default function ToolbarPlugin() {
   const [wordCount, setWordCount] = useState(0);
 
   const updateToolbar = useCallback(() => {
-    const selection = $getSelection();
-    if ($isRangeSelection(selection)) {
-      setIsBold(selection.hasFormat('bold'));
-      setIsItalic(selection.hasFormat('italic'));
-      setIsUnderline(selection.hasFormat('underline'));
-      setIsStrikethrough(selection.hasFormat('strikethrough'));
+    try {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        setIsBold(selection.hasFormat('bold'));
+        setIsItalic(selection.hasFormat('italic'));
+        setIsUnderline(selection.hasFormat('underline'));
+        setIsStrikethrough(selection.hasFormat('strikethrough'));
 
-      // Block type detection
-      const anchorNode = selection.anchor.getNode();
-      let element =
-        anchorNode.getKey() === 'root'
-          ? anchorNode
-          : $findMatchingParent(anchorNode, (e) => {
-              const parent = e.getParent();
-              return parent !== null && $isRootOrShadowRoot(parent);
-            });
+        // Block type detection
+        const anchorNode = selection.anchor.getNode();
+        const element =
+          anchorNode.getKey() === 'root'
+            ? anchorNode
+            : anchorNode.getTopLevelElementOrThrow ? anchorNode.getTopLevelElementOrThrow() : anchorNode;
 
-      if (element === null) {
-        element = anchorNode.getTopLevelElementOrThrow();
-      }
-
-      if ($isListNode(element)) {
-        const parentList = $getNearestNodeOfType(anchorNode, ListNode);
-        const type = parentList ? parentList.getListType() : element.getListType();
-        setBlockType(type === 'bullet' ? 'bullet' : 'number');
-      } else if ($isHeadingNode(element)) {
-        setBlockType(element.getTag());
-      } else {
-        setBlockType(element.getType() || 'paragraph');
-      }
-    }
-
-    // Word count
-    editor.getEditorState().read(() => {
-      const root = editor.getEditorState()._nodeMap;
-      let text = '';
-      root.forEach((node) => {
-        if (node.getType && node.getType() === 'text') {
-          text += node.getTextContent() + ' ';
+        if (element) {
+          if ($isListNode(element)) {
+            const parentList = $getNearestNodeOfType(anchorNode, ListNode);
+            const type = parentList ? parentList.getListType() : element.getListType();
+            setBlockType(type === 'bullet' ? 'bullet' : 'number');
+          } else if ($isHeadingNode(element)) {
+            setBlockType(element.getTag());
+          } else {
+            setBlockType(element.getType ? element.getType() : 'paragraph');
+          }
         }
-      });
-      const words = text.trim().split(/\s+/).filter(Boolean);
-      setWordCount(words.length);
-    });
-  }, [editor]);
+      }
+
+      // Safe Word count using standard Lexical $getRoot().getTextContent()
+      const root = $getRoot();
+      if (root) {
+        const text = root.getTextContent() || '';
+        const words = text.trim().split(/\s+/).filter(Boolean);
+        setWordCount(words.length);
+      }
+    } catch (err) {
+      console.warn('Toolbar update warning:', err);
+    }
+  }, []);
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
@@ -165,7 +152,7 @@ export default function ToolbarPlugin() {
   };
 
   return (
-    <div className="flex items-center gap-0.5 px-3 py-2 bg-white border-b border-gray-100 flex-wrap">
+    <div className="flex items-center gap-0.5 px-3 py-2 bg-gray-50 border-b border-gray-200 flex-wrap select-none">
       {/* Text formatting */}
       <ToolbarButton
         onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold')}
@@ -180,7 +167,7 @@ export default function ToolbarPlugin() {
         active={isItalic}
         title="Italic (Ctrl+I)"
       >
-        <span className="italic w-5 h-5 inline-flex items-center justify-center">I</span>
+        <span className="italic w-5 h-5 inline-flex items-center justify-center font-serif">I</span>
       </ToolbarButton>
 
       <ToolbarButton
@@ -234,7 +221,6 @@ export default function ToolbarPlugin() {
         active={blockType === 'bullet'}
         title="Bullet List"
       >
-        {/* Bullet list icon */}
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="9" y1="6" x2="20" y2="6" />
           <line x1="9" y1="12" x2="20" y2="12" />
@@ -250,7 +236,6 @@ export default function ToolbarPlugin() {
         active={blockType === 'number'}
         title="Numbered List"
       >
-        {/* Numbered list icon */}
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="10" y1="6" x2="21" y2="6" />
           <line x1="10" y1="12" x2="21" y2="12" />
@@ -266,14 +251,13 @@ export default function ToolbarPlugin() {
         active={blockType === 'quote'}
         title="Block Quote"
       >
-        {/* Quote icon */}
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
           <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
         </svg>
       </ToolbarButton>
 
-      {/* Word count — pushed to right */}
-      <div className="ml-auto text-xs text-gray-400 select-none pr-1">
+      {/* Word count */}
+      <div className="ml-auto text-xs text-gray-500 select-none pr-1 font-mono">
         {wordCount} word{wordCount !== 1 ? 's' : ''}
       </div>
     </div>
