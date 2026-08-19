@@ -35,12 +35,12 @@ function ToolbarButton({ onClick, active, title, children, disabled }) {
       disabled={disabled}
       title={title}
       className={`
-        p-1.5 rounded text-sm font-medium transition-all
+        px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center justify-center cursor-pointer select-none
         ${active
-          ? 'bg-purple-100 text-purple-700 font-bold'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-purple-100 text-purple-800 border border-purple-300/80 shadow-2xs'
+          : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 border border-transparent'
         }
-        ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+        ${disabled ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}
       `}
     >
       {children}
