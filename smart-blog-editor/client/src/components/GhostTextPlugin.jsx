@@ -16,8 +16,7 @@ export default function GhostTextPlugin() {
   const [editor] = useLexicalComposerContext();
   const debounceTimerRef = useRef(null);
   const abortControllerRef = useRef(null);
-  // Counter > 0 means we should skip the next N dirty updates caused by
-  // Tab acceptance (ghost→regular node replacement may emit 1–2 updates).
+  // Counter no longer needed — Tab acceptance is tagged 'accept-ghost'
   const justAcceptedRef = useRef(0);
 
   // Helper to clear existing ghost node from editor
@@ -78,6 +77,7 @@ export default function GhostTextPlugin() {
         // true before the update listener has a chance to fire.
         // Use a counter of 2 to absorb both the ghost-removal and
         // regular-insertion dirty updates Lexical may emit separately.
+        // (Now also tagged 'accept-ghost' so the update listener skips it by tag.)
         justAcceptedRef.current = 2;
 
         editor.update(() => {
@@ -88,7 +88,10 @@ export default function GhostTextPlugin() {
                 if ($isGhostTextNode(node)) {
                   const text = node.getTextContent();
                   if (text) {
-                    node.replace($createTextNode(text));
+                    const regularNode = $createTextNode(text);
+                    node.replace(regularNode);
+                    // Move cursor to end of the accepted text
+                    regularNode.select(text.length, text.length);
                   } else {
                     node.remove();
                   }
@@ -96,7 +99,7 @@ export default function GhostTextPlugin() {
               });
             }
           });
-        });
+        }, { tag: 'accept-ghost' });
 
         return true;
       },
@@ -118,20 +121,13 @@ export default function GhostTextPlugin() {
 
     // Editor update listener for debouncing stream requests
     const unregisterUpdate = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
-      // Skip updates caused by ghost text insert/remove (skip-collab tag) or CRDT/undo
-      if (tags.has('skip-collab') || tags.has('collaboration') || tags.has('historic')) {
+      // Skip updates caused by ghost text (skip-collab) or Tab acceptance (accept-ghost)
+      if (tags.has('skip-collab') || tags.has('accept-ghost') || tags.has('collaboration') || tags.has('historic')) {
         return;
       }
 
       // Skip pure selection / cursor moves — only react to actual content edits
       if (dirtyElements.size === 0 && dirtyLeaves.size === 0) {
-        return;
-      }
-
-      // Skip dirty updates caused by Tab acceptance (ghost→regular node replacement).
-      // Decrement the counter; once it hits 0 we allow normal processing again.
-      if (justAcceptedRef.current > 0) {
-        justAcceptedRef.current -= 1;
         return;
       }
 
