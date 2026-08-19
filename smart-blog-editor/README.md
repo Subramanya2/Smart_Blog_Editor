@@ -17,8 +17,10 @@ A Notion-style block editor built with **React 19 (Vite)**, **FastAPI**, **Lexic
 ---
 
 ## 🌐 Live Demo & Endpoints
-- **Frontend App**: `http://localhost:5173`
-- **Backend API**: `http://localhost:8000`
+- **Frontend (Vercel)**: [Click Here](https://smart-blog-editor-subramanya2s-projects.vercel.app)
+- **Backend API (Render)**: [Click Here](https://smart-blog-editor-girl.onrender.com)
+- **Local Client**: `http://localhost:5173`
+- **Local API & Swagger Docs**: `http://localhost:8000/docs`
 - **WebSocket CRDT Relay**: `ws://localhost:8000/ws/{document_id}`
 - **AI Streaming Copilot**: `POST /api/autocomplete`
 
