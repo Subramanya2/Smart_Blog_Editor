@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import useStore from '../store';
 
 export default function usePosts() {
@@ -7,13 +7,7 @@ export default function usePosts() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const token = useStore((state) => state.token);
     const logout = useStore((state) => state.logout);
-
-    const api = axios.create({
-        baseURL: 'https://smart-blog-editor-girl.onrender.com',
-        headers: { Authorization: `Bearer ${token}` }
-    });
 
     const fetchPosts = async () => {
         setLoading(true);

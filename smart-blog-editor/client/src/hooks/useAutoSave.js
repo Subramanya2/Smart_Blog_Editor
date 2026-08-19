@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import axios from 'axios';
+import api from '../services/api';
 import useStore from '../store';
 
 export default function useAutoSave(postId) {
@@ -22,10 +22,9 @@ export default function useAutoSave(postId) {
             timeoutRef.current = setTimeout(async () => {
                 const jsonState = editorState.toJSON();
                 try {
-                    await axios.patch(
-                        `https://smart-blog-editor-girl.onrender.com/api/posts/${postId}`,
-                        { content: jsonState },
-                        { headers: { Authorization: `Bearer ${token}` } }
+                    await api.patch(
+                        `/api/posts/${postId}`,
+                        { content: jsonState }
                     );
                     console.log("Auto-saved!");
                     setIsSaving(false);

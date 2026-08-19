@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 export default function Signup() {
     const [username, setUsername] = useState('');
@@ -11,7 +11,7 @@ export default function Signup() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('https://smart-blog-editor-girl.onrender.com/register', { username, password });
+            await api.post('/register', { username, password });
             navigate('/login');
         } catch (err) {
             setError(err.response?.data?.detail || 'Signup failed');

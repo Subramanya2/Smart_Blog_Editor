@@ -27,9 +27,7 @@ export default function Editor({ postId, initialContent }) {
     nodes: [GhostTextNode],
     theme,
     onError: (e) => console.error(e),
-    editorState: (initialContent && Object.keys(initialContent).length > 0)
-      ? JSON.stringify(initialContent)
-      : null
+    editorState: null
   };
 
   const providerFactory = useCallback(

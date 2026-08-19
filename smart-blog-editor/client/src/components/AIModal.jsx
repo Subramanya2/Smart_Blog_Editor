@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import axios from 'axios';
-import { X, Sparkles, Wand2 } from 'lucide-react'; // Using lucide-react icons
+import api from '../services/api';
+import { X, Sparkles, Wand2 } from 'lucide-react';
 
 export default function AIModal({ isOpen, onClose, onInsert }) {
     const [text, setText] = useState('');
@@ -14,7 +14,7 @@ export default function AIModal({ isOpen, onClose, onInsert }) {
         setLoading(true);
         setResult('');
         try {
-            const res = await axios.post('https://smart-blog-editor-girl.onrender.com/api/ai/generate', {
+            const res = await api.post('/api/ai/generate', {
                 text,
                 prompt_type: type
             });

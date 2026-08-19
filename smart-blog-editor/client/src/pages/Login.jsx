@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import useStore from '../store';
 
 export default function Login() {
@@ -13,12 +13,7 @@ export default function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const formData = new URLSearchParams();
-            // Fastapi OAuth2PasswordRequestForm expects username/password as form data usually, 
-            // but my backend endpoint expects JSON body (UserLogin model).
-            // Let's check main.py... ah, `login(user: UserLogin)`. So JSON is correct.
-
-            const res = await axios.post('https://smart-blog-editor-girl.onrender.com/login', { username, password });
+            const res = await api.post('/login', { username, password });
             login(username, res.data.access_token);
             navigate('/');
         } catch (err) {
