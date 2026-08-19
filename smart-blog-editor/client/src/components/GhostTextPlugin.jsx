@@ -16,8 +16,9 @@ export default function GhostTextPlugin() {
   const [editor] = useLexicalComposerContext();
   const debounceTimerRef = useRef(null);
   const abortControllerRef = useRef(null);
-  // Set to true after Tab acceptance so the replacement update doesn't re-trigger autocomplete
-  const justAcceptedRef = useRef(false);
+  // Counter > 0 means we should skip the next N dirty updates caused by
+  // Tab acceptance (ghost→regular node replacement may emit 1–2 updates).
+  const justAcceptedRef = useRef(0);
 
   // Helper to clear existing ghost node from editor
   const clearGhostNode = () => {
@@ -48,7 +49,37 @@ export default function GhostTextPlugin() {
     const unregisterTab = editor.registerCommand(
       KEY_TAB_COMMAND,
       (event) => {
-        let accepted = false;
+        // Read-only check: is there a ghost node to accept?
+        let hasGhost = false;
+        editor.getEditorState().read(() => {
+          const root = $getRoot();
+          root.getChildren().forEach((child) => {
+            if (child.getChildren) {
+              child.getChildren().forEach((node) => {
+                if ($isGhostTextNode(node) && node.getTextContent()) {
+                  hasGhost = true;
+                }
+              });
+            }
+          });
+        });
+
+        if (!hasGhost) return false;
+
+        event.preventDefault();
+        abortStream();
+        // Clear any pending debounce
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+        // Set flag BEFORE editor.update() — Lexical may flush the update
+        // synchronously inside the command dispatch, so the flag must be
+        // true before the update listener has a chance to fire.
+        // Use a counter of 2 to absorb both the ghost-removal and
+        // regular-insertion dirty updates Lexical may emit separately.
+        justAcceptedRef.current = 2;
+
         editor.update(() => {
           const root = $getRoot();
           root.getChildren().forEach((child) => {
@@ -57,9 +88,7 @@ export default function GhostTextPlugin() {
                 if ($isGhostTextNode(node)) {
                   const text = node.getTextContent();
                   if (text) {
-                    const regularNode = $createTextNode(text);
-                    node.replace(regularNode);
-                    accepted = true;
+                    node.replace($createTextNode(text));
                   } else {
                     node.remove();
                   }
@@ -69,19 +98,7 @@ export default function GhostTextPlugin() {
           });
         });
 
-        if (accepted) {
-          event.preventDefault();
-          abortStream();
-          // Clear any pending debounce from before acceptance
-          if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current);
-            debounceTimerRef.current = null;
-          }
-          // Flag so the dirty-leaves update from the replacement is skipped
-          justAcceptedRef.current = true;
-          return true;
-        }
-        return false;
+        return true;
       },
       COMMAND_PRIORITY_HIGH
     );
@@ -111,10 +128,10 @@ export default function GhostTextPlugin() {
         return;
       }
 
-      // Skip the dirty-leaves update caused by Tab acceptance (ghost→regular node replacement)
-      // Reset the flag so the NEXT real keystroke works normally
-      if (justAcceptedRef.current) {
-        justAcceptedRef.current = false;
+      // Skip dirty updates caused by Tab acceptance (ghost→regular node replacement).
+      // Decrement the counter; once it hits 0 we allow normal processing again.
+      if (justAcceptedRef.current > 0) {
+        justAcceptedRef.current -= 1;
         return;
       }
 
