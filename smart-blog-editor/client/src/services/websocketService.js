@@ -13,8 +13,6 @@ export function createYjsProvider(id, yjsDocMap) {
   if (!doc) {
     doc = new Y.Doc();
     yjsDocMap.set(id, doc);
-  } else {
-    doc.load();
   }
   
   const host = window.location.hostname || 'localhost';

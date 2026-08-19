@@ -37,7 +37,7 @@ export default function Editor({ postId, initialContent }) {
 
   return (
     <div className="relative border rounded-lg p-4 shadow-sm bg-white min-h-[300px]">
-      <LexicalComposer initialConfig={initialConfig}>
+      <LexicalComposer key={postId} initialConfig={initialConfig}>
         <RichTextPlugin
           contentEditable={<ContentEditable className="outline-none min-h-[200px]" />}
           placeholder={<div className="absolute top-4 text-gray-400">Start writing...</div>}
