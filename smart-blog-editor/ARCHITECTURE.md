@@ -1,86 +1,93 @@
 # System Architecture
 
 ## Overview
-Smart Blog Editor is a full-stack application designed for creating and managing rich text blog posts with AI capabilities.
+Smart Blog Editor is a full-stack application designed for real-time collaborative rich-text creation with a streaming AI Copilot powered by Google Gemini, Yjs, and FastAPI.
+
+---
 
 ## Tech Stack
-- **Frontend**: React.js, Tailwind CSS, Zustand, Lexical Editor
-- **Backend**: FastAPI (Python), SQLite
-- **Authentication**: JWT (JSON Web Tokens)
-- **AI**: Google Gemini API
+- **Frontend**: React 19, Vite, Tailwind CSS, Zustand, Lexical Editor, Yjs, `y-websocket`, `@lexical/yjs`
+- **Backend**: FastAPI (Python), SQLite, PyJWT, Passlib, Uvicorn
+- **Collaboration**: Yjs CRDT + WebSocket binary relay (`ws://localhost:8000/ws/{document_id}`)
+- **AI Copilot**: Google Gemini API (`gemini-2.5-flash`) + Server-Sent Events (`POST /api/autocomplete`)
 
-## Backend Design (HLD)
+---
 
-### Database Schema (SQLite)
-We use a relational schema to ensure data integrity.
-- **Users**: Stores `username` and `password_hash`.
-- **Posts**: Stores content, metadata, and links to `author_username`.
-    - `content`: Stored as a JSON string (Lexical state) to ensure full fidelity of the rich text editor is preserved.
-    - `status`: 'draft' or 'published'.
+## Backend Architecture (FastAPI Modular Package Layout)
 
-### API Structure
-- **Auth**: `/login`, `/register` (JWT based).
-- **Posts**: RESTful CRUD (`GET`, `POST`, `PATCH`). `PATCH` is used for auto-saving to minimize data transfer.
-- **AI**: `/api/ai/generate` acts as a proxy to the Gemini API, keeping API keys secure on the server.
+### 1. Layers
+- **Core (`core/`)**: Centralized configuration (`config.py`), SQLite context manager & schema initialization (`database.py`), and JWT/Password hashing dependencies (`security.py`).
+- **Models (`models/`)**: Strongly typed Pydantic DTO models for Authentication, Posts, and AI Requests.
+- **Services (`services/`)**: Business logic layer containing:
+  - `websocket_manager.py`: Connection room manager for broadcasting CRDT binary payloads.
+  - `ai_service.py`: Google Gemini API streaming and REST fallback generators.
+  - `post_service.py`: Database query functions for CRUD operations on blog posts.
+- **Routers (`routers/`)**: Isolated API controllers mounted on the main application (`auth.py`, `posts.py`, `websocket.py`, `ai.py`).
+- **Entry Point (`main.py`)**: Assembles CORS middleware, initializes database, and mounts routers.
 
-## Frontend Design (LLD)
+### 2. Database Schema (SQLite)
+- **`users`**: `username` (PK), `password_hash`
+- **`posts`**: `id` (UUID PK), `title`, `content` (JSON Lexical state string), `status`, `created_at`, `updated_at`, `author_username`
 
-### State Management (Zustand)
-We use Zustand for its simplicity and performance.
-- **Auth Store**: Persists user token in local storage.
-- **Global UI State**: Tracks successful logins/logouts.
+---
 
-### Editor Component (Lexical)
-- **Granular Updates**: The editor uses a custom `AutoSavePlugin` that listens for state updates.
-- **Debouncing**: To prevent API spam, we implement a custom debounce mechanism using `setTimeout` and `useRef`. Changes are saved 2 seconds after the last keystroke.
+## Frontend Architecture (React + Lexical)
 
-### Security
-- **Protected Routes**: React Router handles access control.
-- **Headers**: Axios interceptor/config attaches the JWT token to requests.
+### 1. Lexical Editor & CRDT Plugin
+- **Collaboration**: `CollaborationPlugin` binds editor updates to `Y.Doc`. `createYjsProvider` initializes `WebsocketProvider` targeting `ws://localhost:8000/ws/{document_id}`.
+- **History**: Handled natively by Yjs undo manager (standard `HistoryPlugin` removed to prevent stack conflicts).
 
-## Directory Structure
-```
-/client
-  /src
-    /components  # Reusable UI (Sidebar, EditorArea, Editor, AIModal)
-    /hooks       # Custom logic (usePosts, useAutoSave)
-    /pages       # Route views (Home, Login, Signup)
-    /store.js    # Global state (Zustand)
-/server
-  main.py        # API Entry point
-  auth.py        # Authentication logic
-  blog.db        # SQLite database
-  requirements.txt
-  .env           # Config
-```
+### 2. Streaming AI Copilot (Ghost Text)
+- **`GhostTextNode`**: Custom Lexical `TextNode` subclass styled as greyed-out, italic text (`text-gray-400 opacity-60 italic`).
+- **`GhostTextPlugin`**: React plugin that listens to editor state changes:
+  - **2s Debounce**: Triggers `streamAutocomplete` from `aiService.js`.
+  - **SSE Reader**: Reads `text/event-stream` chunks and appends text to `GhostTextNode`.
+  - **`AbortController`**: Instantly aborts active stream on any non-Tab keydown event.
+  - **Tab Acceptance**: Traps `KEY_TAB_COMMAND` to convert `GhostTextNode` into standard text nodes.
 
-## System Diagram
+---
+
+## System Architecture Diagram
+
 ```mermaid
 graph TD
-    User((User))
+    UserA((User A))
+    UserB((User B))
     
-    subgraph Client [Frontend (Vercel)]
-        UI[React UI]
-        Store[Zustand Store]
-        Hooks[Custom Hooks]
+    subgraph Client [Frontend (React + Lexical)]
+        UI[React UI Components]
+        Lexical[Lexical Composer]
+        GhostNode[GhostTextNode]
+        Yjs[Y.Doc CRDT]
+        Store[Zustand Auth Store]
+        AIService[aiService SSE Reader]
     end
     
-    subgraph Server [Backend (Render)]
-        API[FastAPI]
-        Auth[Auth Module]
+    subgraph Server [Backend (FastAPI)]
+        Main[main.py Entry]
+        WSRelay[WebSocket Relay Router]
+        AIRouter[AI Autocomplete Router]
+        AuthRouter[Auth Router]
+        PostRouter[Posts Router]
         DB[(SQLite DB)]
     end
     
-    subgraph External [External Services]
+    subgraph External [External API]
         Gemini[Google Gemini API]
     end
     
-    User -->|Interacts| UI
-    UI -->|State Updates| Store
-    UI -->|API Calls (Axios)| Hooks
-    Hooks -->|HTTP Request| API
+    UserA -->|Interacts| UI
+    UserB -->|Interacts| UI
+    UI --> Lexical
+    Lexical --> Yjs
     
-    API -->|Validate User| Auth
-    API -->|Read/Write| DB
-    API -->|Generate Content| Gemini
+    Yjs <-->|Binary WS Sync| WSRelay
+    Lexical -->|2s Debounce| AIService
+    AIService -->|POST /api/autocomplete SSE| AIRouter
+    AIRouter -->|Stream Content| Gemini
+    
+    UI -->|API Requests| AuthRouter
+    UI -->|API Requests| PostRouter
+    AuthRouter --> DB
+    PostRouter --> DB
 ```

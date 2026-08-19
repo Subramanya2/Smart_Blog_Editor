@@ -1,10 +1,28 @@
 # Smart Blog Editor
 
-A Notion-style block editor built with **React (Vite)**, **FastAPI**, and **Lexical**, featuring AI-powered writing assistance and robust state management.
+A Notion-style block editor built with **React 19 (Vite)**, **FastAPI**, **Lexical**, and **Yjs**, featuring **Real-Time CRDT Multi-User Collaboration** and a **Streaming AI Copilot (Ghost Text)** powered by **Google Gemini API**.
 
-## 🌐 Live Demo
-- **Frontend (Vercel)**: [Click Here](https://smart-blog-editor-subramanya2s-projects.vercel.app)
-- **Backend API (Render)**: [Click Here](https://smart-blog-editor-girl.onrender.com)
+---
+
+## ✨ Features
+
+- 🤝 **Real-Time CRDT Collaboration**: Powered by **Yjs** and **y-websocket**. Multiple users can edit the same draft concurrently with zero conflict.
+- 🤖 **Streaming AI Copilot (Ghost Text)**: Inline AI completion powered by **Google Gemini** streamed over Server-Sent Events (`text/event-stream`).
+- ⌨️ **Tab Acceptance & Stream Abort**: Press `Tab` to convert streaming ghost text into document text; type any character key to instantly abort the network stream.
+- 📝 **Rich Text Block Editor**: Meta's **Lexical** editor storing raw JSON state to preserve formatting fidelity.
+- 💾 **Debounced Auto-Save**: Efficient O(1) auto-saving to SQLite database.
+- 🔐 **JWT Authentication**: Password hashing with Passlib PBKDF2 and token-based route protection.
+- 🏗️ **Enterprise Modular Architecture**: Clean separation of concerns with FastAPI `APIRouter`, Pydantic models, domain services, and client service modules.
+
+---
+
+## 🌐 Live Demo & Endpoints
+- **Frontend App**: `http://localhost:5173`
+- **Backend API**: `http://localhost:8000`
+- **WebSocket CRDT Relay**: `ws://localhost:8000/ws/{document_id}`
+- **AI Streaming Copilot**: `POST /api/autocomplete`
+
+---
 
 ## 🚀 Setup Instructions
 
@@ -13,13 +31,15 @@ A Notion-style block editor built with **React (Vite)**, **FastAPI**, and **Lexi
 - Node.js 16+
 - Google Gemini API Key
 
+---
+
 ### 1. Backend Setup (FastAPI)
 ```bash
-cd server
+cd smart-blog-editor/server
 
 # Windows
 py -m venv venv
-venv\Scripts\activate
+.\venv\Scripts\activate
 
 # Mac/Linux
 python3 -m venv venv
@@ -28,73 +48,73 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file and add your Google Gemini API Key:
+Create a `.env` file inside `server/.env`:
 ```env
-GEMINI_API_KEY=your_actual_api_key_here
+GEMINI_API_KEY=your_actual_gemini_api_key_here
 ```
 
 Run the server:
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
 ```
-The API will be available at `http://127.0.0.1:8000`.
+API docs available at `http://127.0.0.1:8000/docs`.
+
+---
 
 ### 2. Frontend Setup (React)
 ```bash
-cd client
+cd smart-blog-editor/client
 npm install
 npm run dev
 ```
-The app will be available at `http://localhost:5173`.
+Client will open at `http://localhost:5173`.
 
 ---
 
-## 💾 Auto-Save Logic (DSA Implementation)
+## 🏗️ Codebase Structure
 
-We implemented a custom `useAutoSave` hook to handle draft persistence efficiently.
-
-**Mechanism:**
-- **Debouncing:** We use a `useRef` based debounce mechanism. When the user types, any existing timeout is cleared (`clearTimeout`), and a new 2-second timer is set.
-- **Efficiency:** This approach is **O(1)** for each keystroke (canceling and setting a timer) and ensures we only fire a network request once the user stops typing.
-- **Hook Extraction:** The logic is encapsulated in `client/src/hooks/useAutoSave.js`, separating concerns from the UI component.
-
-```javascript
-// Simplified Logic
-timeoutRef.current = setTimeout(async () => {
-    await saveToBackend(content);
-}, 2000);
+```
+smart-blog-editor/
+├── client/
+│   ├── src/
+│   │   ├── components/      # UI components (Editor, Sidebar, AIModal, GhostTextPlugin)
+│   │   ├── hooks/           # Custom hooks (useAutoSave, usePosts)
+│   │   ├── nodes/           # Custom Lexical nodes (GhostTextNode)
+│   │   ├── pages/           # Views (Home, Login, Signup)
+│   │   ├── services/        # Service helpers (aiService, websocketService)
+│   │   └── store.js         # Zustand auth store
+├── server/
+│   ├── core/                # Config, database context manager, security dependencies
+│   ├── models/              # Pydantic schema DTOs (auth, post, ai)
+│   ├── routers/             # FastAPI APIRouters (auth, posts, websocket, ai)
+│   ├── services/            # Domain services (ai_service, post_service, websocket_manager)
+│   └── main.py              # Lightweight app entry point
 ```
 
 ---
 
-## 🗄️ Database Schema Decisions
+## 💾 Auto-Save & CRDT Sync Logic
 
-We chose **SQLite** for this project, but with a production-ready schema design.
+1. **Yjs CRDT Synchronization**:
+   - `CollaborationPlugin` binds Lexical state to a shared `Y.Doc`.
+   - Binary CRDT updates are broadcasted across clients via `ws://localhost:8000/ws/{document_id}`.
 
-### Why this Schema?
-1.  **JSON Storage for Content:**
-    - We store the post content as a **JSON string** (`content TEXT`) rather than HTML.
-    - **Reason:** Lexical is a state-based editor. Storing the raw JSON state ensures we lose **zero data** (formatting, nodes, custom entities) and allows full re-hydration of the editor state. Storing HTML would result in information loss.
+2. **Debounced Draft Persistence**:
+   - `useAutoSave` hook debounces updates (2 seconds) and issues a `PATCH /api/posts/{id}` request to update SQLite database state.
 
-2.  **UUIDs for IDs:**
-    - We use UUID strings for `id` instead of auto-incrementing integers.
-    - **Reason:** UUIDs are safer for distributed systems and prevent ID enumeration attacks.
+---
 
-3.  **Separation of Concerns:**
-    - `users` table handles authentication (hashed passwords).
-    - `posts` table handles content, linked by `author_username`.
-    - This relational design is normalized and scalable.
+## 🗄️ Database Schema
 
-### Schema
-**Posts Table:**
-- `id` (PK, TEXT)
+### `posts` Table
+- `id` (TEXT, Primary Key, UUID)
 - `title` (TEXT)
-- `content` (TEXT, JSON)
+- `content` (TEXT, Lexical JSON state)
 - `status` (TEXT)
 - `created_at` (TEXT)
 - `updated_at` (TEXT)
-- `author_username` (TEXT, FK)
+- `author_username` (TEXT, Foreign Key)
 
-**Users Table:**
-- `username` (PK, TEXT)
-- `password_hash` (TEXT)
+### `users` Table
+- `username` (TEXT, Primary Key)
+- `password_hash` (TEXT, PBKDF2)
