@@ -26,7 +26,7 @@ async def generate_ai_text(text: str, prompt_type: str) -> str:
                 model='gemini-2.5-flash',
                 contents=prompt_text
             )
-            return response.text
+            return response.text or "[AI] Could not generate response."
         except Exception as e:
             print(f"SDK Error: {e}, falling back to REST API")
 
