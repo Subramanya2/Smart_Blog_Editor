@@ -91,7 +91,12 @@ export default function GhostTextPlugin() {
     );
 
     // Editor update listener for debouncing stream requests
-    const unregisterUpdate = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
+    const unregisterUpdate = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
+      // Skip updates caused by ghost text insert/remove (skip-collab tag) or CRDT/undo
+      if (tags.has('skip-collab') || tags.has('collaboration') || tags.has('historic')) {
+        return;
+      }
+
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }

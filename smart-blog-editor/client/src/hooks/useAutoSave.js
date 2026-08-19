@@ -13,11 +13,11 @@ export default function useAutoSave(postId, onSaveSuccess) {
         if (!postId || !token) return;
 
         const removeUpdateListener = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
-            // Ignore updates triggered by initial mount, collaboration sync, or undo/redo
+            // Ignore updates triggered by initial mount, collaboration sync, undo/redo, or ghost text
             if (dirtyElements.size === 0 && dirtyLeaves.size === 0) {
                 return;
             }
-            if (tags.has('collaboration') || tags.has('historic')) {
+            if (tags.has('collaboration') || tags.has('historic') || tags.has('skip-collab')) {
                 return;
             }
 
