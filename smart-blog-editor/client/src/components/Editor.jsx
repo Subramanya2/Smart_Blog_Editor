@@ -14,6 +14,60 @@ import GhostTextPlugin from './GhostTextPlugin';
 import ToolbarPlugin from './ToolbarPlugin';
 import { createYjsProvider } from '../services/websocketService';
 
+// Default valid Lexical state with root and paragraph node to prevent empty root error
+const DEFAULT_EMPTY_STATE = JSON.stringify({
+  root: {
+    children: [
+      {
+        children: [],
+        direction: null,
+        format: '',
+        indent: 0,
+        type: 'paragraph',
+        version: 1,
+      },
+    ],
+    direction: null,
+    format: '',
+    indent: 0,
+    type: 'root',
+    version: 1,
+  },
+});
+
+function getSafeInitialEditorState(initialContent) {
+  if (!initialContent) return DEFAULT_EMPTY_STATE;
+
+  if (typeof initialContent === 'object') {
+    if (
+      initialContent.root &&
+      Array.isArray(initialContent.root.children) &&
+      initialContent.root.children.length > 0
+    ) {
+      return JSON.stringify(initialContent);
+    }
+    return DEFAULT_EMPTY_STATE;
+  }
+
+  if (typeof initialContent === 'string' && initialContent.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(initialContent);
+      if (
+        parsed &&
+        parsed.root &&
+        Array.isArray(parsed.root.children) &&
+        parsed.root.children.length > 0
+      ) {
+        return initialContent;
+      }
+    } catch {
+      // Not valid JSON string
+    }
+  }
+
+  return DEFAULT_EMPTY_STATE;
+}
+
 // Theme: maps Lexical node types to Tailwind classes
 const theme = {
   paragraph: 'mb-2 leading-7',
@@ -61,14 +115,7 @@ function AutoSaveWrapper({ postId, onUpdateContent }) {
 }
 
 export default function Editor({ postId, initialContent, onUpdateContent }) {
-  const hasContent = initialContent && (
-    (typeof initialContent === 'object' && Object.keys(initialContent).length > 0) ||
-    (typeof initialContent === 'string' && initialContent.trim().length > 0)
-  );
-
-  const initialEditorState = hasContent
-    ? (typeof initialContent === 'string' ? initialContent : JSON.stringify(initialContent))
-    : null;
+  const safeInitialState = getSafeInitialEditorState(initialContent);
 
   const initialConfig = {
     namespace: 'SmartBlogEditor',
@@ -81,7 +128,7 @@ export default function Editor({ postId, initialContent, onUpdateContent }) {
     ],
     theme,
     onError: (e) => console.error(e),
-    editorState: initialEditorState,
+    editorState: safeInitialState,
   };
 
   const providerFactory = useCallback(
@@ -90,7 +137,7 @@ export default function Editor({ postId, initialContent, onUpdateContent }) {
   );
 
   return (
-    <div className="relative border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden">
+    <div className="relative border border-slate-200/90 rounded-2xl shadow-sm bg-white overflow-hidden ring-1 ring-slate-900/5">
       <LexicalCollaboration>
         <LexicalComposer key={postId} initialConfig={initialConfig}>
 
@@ -98,16 +145,16 @@ export default function Editor({ postId, initialContent, onUpdateContent }) {
           <ToolbarPlugin />
 
           {/* ── Editor surface ── */}
-          <div className="relative px-6 py-5 min-h-[380px]">
+          <div className="relative px-8 py-6 min-h-[380px]">
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
-                  className="outline-none min-h-[340px] prose prose-gray max-w-none text-gray-800 leading-7"
+                  className="outline-none min-h-[340px] prose prose-slate max-w-none text-slate-800 leading-7 font-sans"
                 />
               }
               placeholder={
-                <div className="absolute top-5 left-6 text-gray-300 pointer-events-none select-none">
-                  Start writing… (stop typing for AI suggestions)
+                <div className="absolute top-6 left-8 text-slate-300 pointer-events-none select-none text-base">
+                  Start writing your story… (stop typing for AI copilot suggestions)
                 </div>
               }
               ErrorBoundary={LexicalErrorBoundary}
@@ -127,7 +174,7 @@ export default function Editor({ postId, initialContent, onUpdateContent }) {
               id={postId}
               providerFactory={providerFactory}
               shouldBootstrap={true}
-              initialEditorState={initialEditorState}
+              initialEditorState={safeInitialState}
             />
           )}
 
