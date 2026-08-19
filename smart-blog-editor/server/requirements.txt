@@ -6,5 +6,6 @@ pyjwt
 passlib
 requests
 python-dotenv
-google-generativeai
-
+websockets
+google-genai
+groq
