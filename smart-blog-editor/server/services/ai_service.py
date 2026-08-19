@@ -38,7 +38,7 @@ def _groq_complete_sync(prompt: str) -> list[str]:
     try:
         client = GroqClient(api_key=GROQ_API_KEY)
         stream = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="groq/compound-mini",
             messages=[
                 {
                     "role": "system",
@@ -155,7 +155,7 @@ async def generate_ai_text(text: str, prompt_type: str) -> str:
             def _sync():
                 client = GroqClient(api_key=GROQ_API_KEY)
                 resp = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model="groq/compound-mini",
                     messages=[{"role": "user", "content": prompt_text}],
                     max_tokens=512,
                 )
