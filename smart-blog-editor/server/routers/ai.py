@@ -17,5 +17,11 @@ async def generate_ai(request: AIRequest):
 async def autocomplete_ai(request: AutocompleteRequest):
     return StreamingResponse(
         generate_autocomplete_stream(request.text), 
-        media_type="text/event-stream"
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*"
+        }
     )

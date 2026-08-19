@@ -30,7 +30,7 @@ export default function GhostTextPlugin() {
           });
         }
       });
-    });
+    }, { tag: 'skip-collab' });
   };
 
   // Helper to abort active stream
@@ -137,20 +137,23 @@ export default function GhostTextPlugin() {
               });
 
               if (!foundGhost) {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection)) {
-                  const ghostNode = $createGhostTextNode(accumulatedGhostText);
-                  selection.insertNodes([ghostNode]);
+                const root = $getRoot();
+                const lastChild = root.getLastChild();
+                const ghostNode = $createGhostTextNode(accumulatedGhostText);
+                if (lastChild && typeof lastChild.append === 'function') {
+                  lastChild.append(ghostNode);
+                } else {
+                  root.append(ghostNode);
                 }
               }
-            });
+            }, { tag: 'skip-collab' });
           });
         } catch (err) {
           if (err.name !== 'AbortError') {
             console.error('Ghost text streaming error:', err);
           }
         }
-      }, 2000);
+      }, 1200);
     });
 
     return () => {
