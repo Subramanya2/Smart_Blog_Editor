@@ -17,7 +17,7 @@ A modern Notion-style collaborative rich-text editor built with **React 19**, **
 ---
 
 ## 🌐 Live Demo & Endpoints
-- **Frontend (Vercel)**: [Live Web App](https://smart-blog-editor-subramanya2s-projects.vercel.app)
+- **Frontend (Vercel)**: [Live Web App](https://smart-blog-editor-omega.vercel.app)
 - **Backend API (Render)**: [API Base URL](https://smart-blog-editor-girl.onrender.com)
 - **Local Client**: `http://localhost:5173`
 - **Local API & Swagger Docs**: `http://localhost:8000/docs`
