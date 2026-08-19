@@ -97,14 +97,17 @@ export default function GhostTextPlugin() {
         return;
       }
 
+      // Skip pure selection / cursor moves — only react to actual content edits
+      if (dirtyElements.size === 0 && dirtyLeaves.size === 0) {
+        return;
+      }
+
+      // User typed something — abort any running stream and clear stale ghost text
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-
-      if (dirtyElements.size > 0 || dirtyLeaves.size > 0) {
-        abortStream();
-        clearGhostNode();
-      }
+      abortStream();
+      clearGhostNode();
 
       debounceTimerRef.current = setTimeout(async () => {
         let currentText = '';
