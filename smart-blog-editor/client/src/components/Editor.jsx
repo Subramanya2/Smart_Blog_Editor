@@ -3,6 +3,7 @@ import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { CollaborationPlugin } from '@lexical/react/LexicalCollaborationPlugin';
+import { LexicalCollaboration } from '@lexical/react/LexicalCollaborationContext';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import useAutoSave from '../hooks/useAutoSave';
 import { GhostTextNode } from '../nodes/GhostTextNode';
@@ -37,22 +38,24 @@ export default function Editor({ postId, initialContent }) {
 
   return (
     <div className="relative border rounded-lg p-4 shadow-sm bg-white min-h-[300px]">
-      <LexicalComposer key={postId} initialConfig={initialConfig}>
-        <RichTextPlugin
-          contentEditable={<ContentEditable className="outline-none min-h-[200px]" />}
-          placeholder={<div className="absolute top-4 text-gray-400">Start writing...</div>}
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        {postId && (
-          <CollaborationPlugin
-            id={postId}
-            providerFactory={providerFactory}
-            shouldBootstrap={true}
+      <LexicalCollaboration>
+        <LexicalComposer key={postId} initialConfig={initialConfig}>
+          <RichTextPlugin
+            contentEditable={<ContentEditable className="outline-none min-h-[200px]" />}
+            placeholder={<div className="absolute top-4 text-gray-400">Start writing...</div>}
+            ErrorBoundary={LexicalErrorBoundary}
           />
-        )}
-        <GhostTextPlugin />
-        {postId && <AutoSaveWrapper postId={postId} />}
-      </LexicalComposer>
+          {postId && (
+            <CollaborationPlugin
+              id={postId}
+              providerFactory={providerFactory}
+              shouldBootstrap={true}
+            />
+          )}
+          <GhostTextPlugin />
+          {postId && <AutoSaveWrapper postId={postId} />}
+        </LexicalComposer>
+      </LexicalCollaboration>
     </div>
   );
 }
